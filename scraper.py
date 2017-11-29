@@ -1,9 +1,12 @@
 import collections
+import string
+from pprint import pprint
+
 import bs4
 import urllib3
 import re
 from appJar import gui
-from logging import log, log_return
+from my_logging import log_message as log, log_return
 from utils import listmerger, list_demerger, get_methods_from_class
 from consts import ints_str_list as ints_str
 from platfowm_vars import dir_sep as dirsep, ROOTDIR
@@ -36,26 +39,25 @@ def get_number_pages():
 
     return int(page_number)
 
+
 def run_scrape(is_test):
     results_as_strs = []
     if is_test:
-        num_pages = 5
+        num_pages = 3
     else:
         num_pages = get_number_pages()
 
     data_scraper = Data_Scraper()
-    for i in range(1, num_pages + 1):
+    for i in range(1, num_pages+1):
         page_results_as_bs4 = get_results_from_page_n(i)
         log("got page " + str(i) + "/" + str(num_pages))
 
         apply_data_scraping(page_results_as_bs4, data_scraper)
 
-        for result in page_results_as_bs4:
-            results_as_strs.append(str(result))
+    merged_results, keys = apply_filters(data_scraper.scraped_dict)
 
-    results_as_strs = apply_filters(results_as_strs, data_scraper.scraped_dict)
-    create_html(results_as_strs)
-    log('done')
+    log('scrape done')
+    return merged_results, keys
 
 
 def apply_data_scraping(page_as_bs4, data_scraper):
@@ -64,12 +66,11 @@ def apply_data_scraping(page_as_bs4, data_scraper):
         method[1](page_as_bs4)
 
 
-def apply_filters(results_as_strs, scraped_dict):
+def apply_filters(scraped_dict):
     keys = collections.defaultdict(int)# a dict contianing the indexes for bits of data
-    keys.update({'results_as_strs':0})
-    merged_results = [results_as_strs]
+    merged_results = []
 
-    i = 1
+    i = 0
     for key in scraped_dict.keys():
         merged_results.append(scraped_dict[key])
         keys.update({key: i})
@@ -80,8 +81,7 @@ def apply_filters(results_as_strs, scraped_dict):
     for method in get_methods_from_class(filter):
         merged_results = method[1](merged_results, keys)
 
-    return list_demerger(merged_results, keys['results_as_strs']) # only results_as_strs that got past the filters
-
+    return merged_results, keys
 
 
 def get_results_from_page_n(page_n):
@@ -105,28 +105,6 @@ def get_result_list(pages):
             results.append(result)
         i.clear()
     return results
-
-
-def create_html(results_as_strs):
-    page = bs4.BeautifulSoup(http.request("GET", steam_special_url_firstpage).data, 'html.parser')
-
-    # deletes extra search options things because they break the page
-    tag = page.find("div", {"id": "additional_search_options"})
-    tag.clear()# deletes the search options bar thing
-    #tag = page.find("div", {"class": "leftcol large"}) commented out because it leaves an ugly blue bar
-    #tag.clear()# deletes the searchbar thing above the results
-
-    # dumps the results in the page
-    tag = page.find("div", {"id": "search_result_container"})
-    tag.clear()
-    # todo make it so that it adds the html as text tot the page rather than bs4 to save ram
-    for result in results_as_strs:
-        i = bs4.BeautifulSoup(result, 'html.parser')
-        tag.append(i)  # turns it back into bs4
-
-    with open(ROOTDIR + dirsep + "results.html", 'w', encoding="utf-8") as outfile:
-        outfile.write(str(page))
-
 
 class Data_Scraper:
     # every methode in this class will be applied to the the results
@@ -196,11 +174,42 @@ class Data_Scraper:
 
     def get_titles_list(self, results_list):
         log("scraping title")
-        titles = []
         for result in results_list:
-            titles.append(str(result.find("span", {"class": "title"}).string))
-        for title in titles:
-            self.scraped_dict["titles"].append(title)
+            self.scraped_dict["titles"].append(
+                str(result.find("span", {"class": "title"}).string)
+                                               )
+
+    def get_old_and_new_price(self, results_list):
+        log('scraping the old+new price')
+        for result in results_list:
+            if result.find('div', {'class': 'col search_price discounted responsive_secondrow'}) is not None:
+                price_str =  str(result.find('div', {'class': 'col search_price discounted responsive_secondrow'}).text)
+                price_str = price_str[:price_str.rfind('€')] # cuts of € and the spaces that come after it at the end of the string so you can split it cleanly
+                price_str = price_str.replace('\n', '')# there is apperently a return at the start of the string
+                price_str = price_str.replace(',', '.')
+                price_str = price_str.replace('--', '0')# if a price has no decimal places it apperently adds --
+                old_new_str = price_str.split('€')
+
+                self.scraped_dict["old_price"].append(float(old_new_str[0]))
+                self.scraped_dict["new_price"].append(float(old_new_str[1]))
+            else:
+                self.scraped_dict["old_price"].append(float(0))
+                self.scraped_dict["new_price"].append(float(0))
+
+    def get_app_id(self, results_list):
+        # THE APP ID(S) ARE STRORED AS STRINGS FOR NOW since i don't need them as ints right now.
+        # nor can i think of a reason why i should want that.
+        log("scraping appids")
+        for result in results_list:
+            try:
+                self.scraped_dict["appids"].append(
+                    result['data-ds-appid'])
+                self.scraped_dict["is_bundle"].append(False)
+            except KeyError:
+                self.scraped_dict["appids"].append(
+                    result['data-ds-bundleid'])
+                self.scraped_dict["is_bundle"].append(True)
+
 
 class Filter:
     # every methode in this class will be applied to the the results
@@ -235,6 +244,26 @@ class Filter:
             if result[n_rev_idx] >= self.min_reviews and result[min_positive_idx] >= self.min_positive:
                 ret.append(result)
         log(str(len(ret)) + " out of " + str(before) + " had good enough reviews")
+        return ret
+
+    def delete_duplicates(self, merged_results, keys):
+        doubles_found = 0
+        ret = []
+        appid_key = keys['appids']
+        is_bundle_key = keys['is_bundle']
+        for line in merged_results:
+            if len(ret) > 0:
+                double = False
+                for i in ret:
+                    if i[appid_key] == line[appid_key] and i[is_bundle_key] == line[is_bundle_key]:
+                        double = True
+                        doubles_found += 1
+                        break
+                if not double:
+                    ret.append(line)
+            else:
+                ret.append(line)
+        log('removed ' + str(doubles_found) + ' doubles')
         return ret
 
 class Gui:
@@ -278,7 +307,8 @@ class Gui:
 # todo count duplicates to see if there's somthing i can do about it
 # todo make gui
 # todo add chache system
+# todo i could make this more effecient by doing basic data scrape -> filter -> rest of datascraping
 if __name__ == '__main__':
     # ui = Gui()
     # ui.open()
-    run_scrape(False)
+    run_scrape(True)

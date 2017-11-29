@@ -25,8 +25,7 @@ def listmerger(lists):
                 temp.append(lis[i])
             ret.append(temp)
         return ret
-		
-		
+
 def list_demerger(list_of_lists, index):
     # takes a list of lists and returns a list containing all the items in that index
     ret = []

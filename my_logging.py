@@ -1,5 +1,8 @@
 import datetime
 
+
+# this file is called my_logging instead of logging because it causes bugs
+
 from platfowm_vars import ROOTDIR, dir_sep
 
 
