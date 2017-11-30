@@ -63,11 +63,17 @@ def get_tweeted_games_log():
     except IOError:
         tmp = open(tweeted_games_log_path, 'w')
     tmp.close()
-    with open(tweeted_games_log_path, mode='r') as logfile:
+    with open(tweeted_games_log_path, mode='r+') as logfile:
         lines = logfile.read()
         lines = lines.split('\n')
-    ret = []
-    for line in lines:
+        if len(lines) > 1500:
+            logfile.seek(0)
+            logfile.truncate()
+            for i in range(1000):
+                logfile.write(lines[i] + '\n')
+
+        ret = []
+        for line in lines:
             if line != '':
                 line = line.split(',')
                 line[0] = timestamp_to_datatime(line[0])
@@ -154,7 +160,7 @@ max_chars = 280
 days_before_double_tweet = 45
 tweeted_games_log_path = ROOTDIR + dir_sep + 'tweeted_games.log'
 
-results, keys = run_scrape(True)
+results, keys = run_scrape(False)
 results.sort(key= lambda p : p[keys['discount_percents']], reverse=True) # should already be sorted but just to be sure
 
 tweet = build_tweet(results)
