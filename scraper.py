@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import collections
 import string
 from pprint import pprint
@@ -5,11 +6,10 @@ from pprint import pprint
 import bs4
 import urllib3
 import re
-from appJar import gui
 from my_logging import log_message as log, log_return
 from utils import listmerger, list_demerger, get_methods_from_class
 from consts import ints_str_list as ints_str
-from platfowm_vars import dir_sep as dirsep, ROOTDIR
+from platform_vars import dir_sep as dirsep, ROOTDIR
 
 steam_special_url_firstpage = "http://store.steampowered.com/search/?specials=1"
 and_page = "&page="
@@ -183,7 +183,7 @@ class Data_Scraper:
         log('scraping the old+new price')
         for result in results_list:
             if result.find('div', {'class': 'col search_price discounted responsive_secondrow'}) is not None:
-                price_str =  str(result.find('div', {'class': 'col search_price discounted responsive_secondrow'}).text)
+                price_str = str(result.find('div', {'class': 'col search_price discounted responsive_secondrow'}).text)
                 price_str = price_str[:price_str.rfind('€')] # cuts of € and the spaces that come after it at the end of the string so you can split it cleanly
                 price_str = price_str.replace('\n', '')# there is apperently a return at the start of the string
                 price_str = price_str.replace(',', '.')
@@ -266,47 +266,10 @@ class Filter:
         log('removed ' + str(doubles_found) + ' doubles')
         return ret
 
-class Gui:
-    app = gui("Login Form")
 
-    def init_start_scr(self):
-        app = self.app
-        app.addLabel("userLab", "Username:", 0, 0)
-        app.addEntry("userEnt", 0, 1)
-        app.setFocus("userEnt")
-        app.addLabel("passLab", "Password:", 1, 0)
-        app.addSecretEntry("passEnt", 1, 1)
-        app.addButtons(["Submit", "Cancel"], self.press, colspan=2)
-
-    def init_loading_scr(self):
-        app = self.app
-
-    def init_settings(self):
-        app = self.app
-        app.setGeom(300, 225)
-        app.setResizable(canResize=False)
-        app.enableEnter(self.press)
-
-    def open(self):
-        self.init_settings()
-        self.init_start_scr()
-        self.app.go()
-
-    def press(self, btnName):
-        app = self.app
-        if btnName == "Cancel":
-            app.stop()
-
-        if app.getEntry("userEnt") == "rjarvis":
-            if app.getEntry("passEnt") == "abc":
-                app.infoBox("Success", "Congratulations, you are logged in!")
-        else:
-            app.errorBox("Failed login", "Invalid username or password")
 
 
 # todo count duplicates to see if there's somthing i can do about it
-# todo make gui
-# todo add chache system
 # todo i could make this more effecient by doing basic data scrape -> filter -> rest of datascraping
 if __name__ == '__main__':
     # ui = Gui()

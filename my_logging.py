@@ -1,9 +1,8 @@
-import datetime
-
+from utils import get_timestamp
 
 # this file is called my_logging instead of logging because it causes bugs
 
-from platfowm_vars import ROOTDIR, dir_sep
+from platform_vars import ROOTDIR, dir_sep
 
 
 # todo make this use json and make a gui tool for filtering and viewing logfiles
@@ -32,5 +31,3 @@ def write_to_logfile(line):
     with open(ROOTDIR + dir_sep + "log.txt",mode='a') as logfile:
         logfile.write(line + '\n')
 
-def get_timestamp():
-    return '[{:%Y-%m-%d_%H-%M-%S}]'.format(datetime.datetime.now())
