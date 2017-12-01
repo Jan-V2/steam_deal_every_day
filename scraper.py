@@ -202,13 +202,21 @@ class Data_Scraper:
         log("scraping appids")
         for result in results_list:
             try:
-                self.scraped_dict["appids"].append(
-                    result['data-ds-appid'])
-                self.scraped_dict["is_bundle"].append(False)
+                if(',' in result['data-ds-appid']):# if it has multible appids which is when it's an old style bundle
+                    self.scraped_dict["appids"].append(
+                        result['data-ds-packageid'])
+                    self.scraped_dict["is_bundle"].append(True)
+                    self.scraped_dict["is_old_bundle"].append(True)
+                else:
+                    self.scraped_dict["appids"].append(
+                        result['data-ds-appid'])
+                    self.scraped_dict["is_bundle"].append(False)
+                    self.scraped_dict["is_old_bundle"].append(False)
             except KeyError:
                 self.scraped_dict["appids"].append(
                     result['data-ds-bundleid'])
                 self.scraped_dict["is_bundle"].append(True)
+                self.scraped_dict["is_old_bundle"].append(False)
 
 
 class Filter:
@@ -233,7 +241,7 @@ class Filter:
     # parameters for get_good_games
     # todo make configureable
     min_reviews = 100
-    min_positive = 65
+    min_positive = 75
 
     def get_good_games(self, merged_results, keys):
         n_rev_idx = keys['n_user_reviews']

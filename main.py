@@ -121,11 +121,15 @@ def get_tweetable_result(results, i):
 
 def get_url(result):
     global keys
-    bundle_url = 'http://store.steampowered.com/bundle/'
+    new_bundle_url = 'http://store.steampowered.com/bundle/'
+    old_bundle_url = 'http://store.steampowered.com/sub/'
     app_url = 'http://store.steampowered.com/app/'
     url = ''
     if result[keys['is_bundle']]:
-        url += bundle_url
+        if result[keys['is_old_bundle']]:
+            url += old_bundle_url
+        else:
+            url += new_bundle_url
     else:
         url += app_url
     url += result[keys['appids']] + '/'
