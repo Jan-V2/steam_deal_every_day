@@ -46,16 +46,13 @@ def run_scrape(is_test):
         num_pages = 3
     else:
         num_pages = get_number_pages()
-
     data_scraper = Data_Scraper()
     for i in range(1, num_pages+1):
         page_results_as_bs4 = get_results_from_page_n(i)
         log("got page " + str(i) + "/" + str(num_pages))
-
         apply_data_scraping(page_results_as_bs4, data_scraper)
 
     merged_results, keys = apply_filters(data_scraper.scraped_dict)
-
     log('scrape done')
     return merged_results, keys
 
@@ -176,8 +173,7 @@ class Data_Scraper:
         log("scraping title")
         for result in results_list:
             self.scraped_dict["titles"].append(
-                str(result.find("span", {"class": "title"}).string)
-                                               )
+                str(result.find("span", {"class": "title"}).string))
 
     def get_old_and_new_price(self, results_list):
         log('scraping the old+new price')
@@ -191,7 +187,10 @@ class Data_Scraper:
                 old_new_str = price_str.split('€')
 
                 self.scraped_dict["old_price"].append(float(old_new_str[0]))
-                self.scraped_dict["new_price"].append(float(old_new_str[1]))
+                if len(old_new_str) > 1:
+                    self.scraped_dict["new_price"].append(float(old_new_str[1]))
+                else:
+                    self.scraped_dict["new_price"].append(float(0))
             else:
                 self.scraped_dict["old_price"].append(float(0))
                 self.scraped_dict["new_price"].append(float(0))
@@ -239,7 +238,7 @@ class Filter:
         return merged_results
 
     # parameters for get_good_games
-    # todo make configureable
+    # todo make configureable via gui
     min_reviews = 100
     min_positive = 75
 
@@ -255,6 +254,7 @@ class Filter:
         return ret
 
     def delete_duplicates(self, merged_results, keys):
+        # i think that it adds results onto the final page until it's 25
         doubles_found = 0
         ret = []
         appid_key = keys['appids']

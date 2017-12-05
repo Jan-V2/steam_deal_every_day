@@ -85,7 +85,7 @@ def get_tweetable_result(results, i):
     global keys
     # returns a 1 line string that can be added to the tweet.
     log = get_tweeted_games_log()
-    url = get_url(results[i])
+    url = get_url(results[i], False)
 
     looping = True
     while looping:
@@ -97,7 +97,7 @@ def get_tweetable_result(results, i):
                     break
         if is_in_log:
             i += 1
-            url = get_url(results[i])
+            url = get_url(results[i], False)
         else:
             looping = False
     write_to_tweeted_games(url)
@@ -109,7 +109,11 @@ def get_tweetable_result(results, i):
     if len(title) > title_maxlength:
         title = title[:title_maxlength-4]
         title += "..."
-    line = title + " was €" + str(result[keys['old_price']]) + " is now €" + str(result[keys['new_price']])
+    if result[keys['new_price']] is float(0):
+        new_price = "Free to Play"
+    else:
+        new_price = "€" + str(result[keys['new_price']])
+    line = title + " was €" + str(result[keys['old_price']]) + " is now " + new_price
     ret.append(line)
 
     ret.append(str(results[i][keys['discount_percents']]) + '% off!')
@@ -119,12 +123,15 @@ def get_tweetable_result(results, i):
     ret.append('')
     return ret, i
 
-def get_url(result):
+def get_url(result, short_url):
     global keys
-    new_bundle_url = 'http://store.steampowered.com/bundle/'
-    old_bundle_url = 'http://store.steampowered.com/sub/'
-    app_url = 'http://store.steampowered.com/app/'
+    url_start = 'store.steampowered.com'
+    new_bundle_url = '/bundle/'
+    old_bundle_url = '/sub/'
+    app_url = '/app/'
     url = ''
+    if not short_url:
+        url += url_start
     if result[keys['is_bundle']]:
         if result[keys['is_old_bundle']]:
             url += old_bundle_url
@@ -156,7 +163,7 @@ def build_tweet(results):
 def create_test_double_log(results, log_path):
     log('creating test double log')
     for i in range(10):
-        write_to_tweeted_games(get_url(results[i]))
+        write_to_tweeted_games(get_url(results[i], False))
 
 
 api = api_key.get_api()
@@ -169,7 +176,7 @@ results.sort(key= lambda p : p[keys['discount_percents']], reverse=True) # shoul
 
 tweet = build_tweet(results)
 log(tweet)
-api.update_status(tweet)
+#api.update_status(tweet)
 
 # for debug
 # create_test_double_log(results, keys, tweeted_games_log_path)
